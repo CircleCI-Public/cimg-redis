@@ -35,13 +35,13 @@ jobs:
   build:
     docker:
       - image: cimg/go:1.17
-      - image: cimg/redis:6.2
+      - image: cimg/redis:6.2.6
     steps:
       - checkout
 ```
 
 In the above example, the CircleCI Go Docker image is used for the primary container while the Redis image is used as a secondary.
-More specifically, the tag `6.2` is used meaning the version of Redis will be v6.2.
+More specifically, the tag `6.2.6` is used meaning the version of Redis will be v6.2.6.
 You can now connect to a Redis instance from the primary image within the steps for this job.
 
 
@@ -105,19 +105,19 @@ git clone --recurse-submodules git@github.com:CircleCI-Public/cimg-redis.git
 ### Generating Dockerfiles
 
 Dockerfiles can be generated for a specific Redis version using the `gen-dockerfiles.sh` script.
-For example, to generate the Dockerfile for v6.2, you would run the following from the root of the repo:
+For example, to generate the Dockerfile for v6.2.6, you would run the following from the root of the repo:
 
 ```bash
-./shared/gen-dockerfiles.sh 6.2
+./shared/gen-dockerfiles.sh 6.2.6
 ```
 
-The generated Dockerfile will be located at `./6.2/Dockefile`.
+The generated Dockerfile will be located at `./6.2.6/Dockefile`.
 To build this image locally and try it out, you can run the following:
 
 ```bash
-cd 6.2
-docker build -t test/redis:6.2 .
-docker run -it test/redis:6.2 bash
+cd 6.2.6
+docker build -t test/redis:6.2.6 .
+docker run -it test/redis:6.2.6 bash
 ```
 
 ### Building the Dockerfiles
