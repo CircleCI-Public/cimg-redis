@@ -6,15 +6,16 @@ ENV REDIS_VERSION=6.0.16
 
 USER root
 
-RUN groupadd -r -g 1337 redis && useradd -r -g redis -u 1337 redis
-
-RUN apt-get update && \
-    apt-get install -y gosu
+RUN groupadd -r -g 1337 redis && useradd -r -g redis -u 1337 redis && \
+    apt-get update && \
+    apt-get install -y gosu && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN curl -sSL https://download.redis.io/releases/redis-${REDIS_VERSION}.tar.gz | tar -xz && \
     cd redis-${REDIS_VERSION} && \
     make && \
-    make install
+    make install && \
+    redis-server --version | grep "${REDIS_VERSION}"
 
 EXPOSE 6379
 
