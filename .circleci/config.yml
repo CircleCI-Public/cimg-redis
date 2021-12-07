@@ -46,7 +46,7 @@ jobs:
               done
               printf "Running Version Check...\n"
               VERSION=$(echo $IMAGE | cut -d ":" -f2 | cut -d "-" -f1)
-              if redis-cli INFO SERVER" | grep $VERSION ; then
+              if redis-cli INFO SERVER | grep $VERSION ; then
                 printf "Version matches!\n"
               else
                 printf "Version mismatch!\n"
