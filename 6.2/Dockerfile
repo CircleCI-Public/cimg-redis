@@ -1,8 +1,12 @@
-FROM cimg/base:2021.10
+# vim:set ft=dockerfile:
+
+# Do not edit individual Dockerfiles manually. Instead, please make changes to the Dockerfile.template, which will be used by the build script to generate Dockerfiles.
+
+FROM cimg/base:2022.01
 
 LABEL maintainer="Community & Partner Engineering Team <community-partner@circleci.com>"
 
-ENV REDIS_VERSION=6.2.6
+ENV REDIS_VERSION=6.2.3
 
 USER root
 
