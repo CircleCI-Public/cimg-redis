@@ -3,6 +3,3 @@
 
 docker push cimg/redis:7.0.3
 docker push cimg/redis:7.0
-
-docker push cimg/redis:7.0.4
-docker push cimg/redis:7.0
