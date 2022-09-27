@@ -6,7 +6,7 @@ FROM cimg/base:2022.08
 
 LABEL maintainer="Community & Partner Engineering Team <community-partner@circleci.com>"
 
-ENV REDIS_VERSION=7.0.4
+ENV REDIS_VERSION=7.0.5
 
 USER root
 
