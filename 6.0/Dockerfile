@@ -1,8 +1,17 @@
-FROM cimg/base:2021.10
+# vim:set ft=dockerfile:
+
+# Do not edit individual Dockerfiles manually. Instead, please make changes to the Dockerfile.template, which will be used by the build script to generate Dockerfiles.
+
+# By policy, the base image tag should be a quarterly tag unless there's a
+# specific reason to use a different one. This means January, April, July, or
+# October.
+
+# NOTE: This uses November due to an OpenSSL CVE fix. We will resume using quarterly versions of cimg-base in Q1
+FROM cimg/base:2022.11
 
 LABEL maintainer="Community & Partner Engineering Team <community-partner@circleci.com>"
 
-ENV REDIS_VERSION=6.0.16
+ENV REDIS_VERSION=6.0.17
 
 USER root
 
