@@ -7,11 +7,11 @@
 # October.
 
 # NOTE: This uses November due to an OpenSSL CVE fix. We will resume using quarterly versions of cimg-base in Q1
-FROM cimg/base:2022.11
+FROM cimg/base:2023.01
 
 LABEL maintainer="Community & Partner Engineering Team <community-partner@circleci.com>"
 
-ENV REDIS_VERSION=7.0.8
+ENV REDIS_VERSION=7.0.9
 
 USER root
 
