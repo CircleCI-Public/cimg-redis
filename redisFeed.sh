@@ -31,7 +31,7 @@ getRedisVersions
 if [ -n "${vers[*]}" ]; then
   echo "Included version updates: ${vers[*]}"
   echo "Running release script"
-  # ./shared/release.sh "${vers[@]}"
+  ./shared/release.sh "${vers[@]}"
 else
   echo "No new version updates"
   exit 0
