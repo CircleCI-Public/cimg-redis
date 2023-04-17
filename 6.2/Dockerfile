@@ -6,12 +6,11 @@
 # specific reason to use a different one. This means January, April, July, or
 # October.
 
-# NOTE: This uses November due to an OpenSSL CVE fix. We will resume using quarterly versions of cimg-base in Q1
-FROM cimg/base:2023.01
+FROM cimg/base:2023.04
 
 LABEL maintainer="Community & Partner Engineering Team <community-partner@circleci.com>"
 
-ENV REDIS_VERSION=6.2.10
+ENV REDIS_VERSION=6.2.11
 
 USER root
 
