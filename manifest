@@ -4,3 +4,4 @@ repository=redis
 parent=base
 variants=()
 namespace=cimg
+arm64=1
