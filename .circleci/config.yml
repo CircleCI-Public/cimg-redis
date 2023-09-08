@@ -1,12 +1,19 @@
 version: 2.1
 
 orbs:
-  cimg: circleci/cimg@0.3.3
+  cimg: circleci/cimg@dev:d365891f2c6242fdc77cd40f9bf4589dcaa3d162
+  aws-cli: circleci/aws-cli@4.1.0
   slack: circleci/slack@4.12.1
   gh: circleci/github-cli@2.2.0
 
+aws-image-tag:
+  aws-image: &aws-image cimg/aws:2023.07.1
+
 parameters:
   cron:
+    type: boolean
+    default: false
+  check_all:
     type: boolean
     default: false
 
@@ -21,75 +28,62 @@ workflows:
     when:
       not: << pipeline.parameters.cron >>
     jobs:
-    - cimg/build-and-deploy:
-        name: "Staging"
-        docker-namespace: ccitest
-        docker-repository: redis
-        publish-branch: test
-        filters:
-          branches:
-            ignore:
-              - main
-        post-steps:
-          - run:
-              name: Install Prerequisites
-              command: |
-                sudo apt-get update && \
-                sudo apt-get install -y redis
-          - run:
-              name: Test Docker Images
-              shell: /bin/bash -o pipefail
-              command: |
-                  ssh -f -N -L localhost:6379:localhost:6379 remote-docker
-                  IMAGES=$(docker images --format='{{.Repository}}:{{.Tag}}' | grep "cimg/redis")
-                  for IMAGE in $IMAGES; do
-                    printf "Booting $IMAGE...\n"
-                    CONTAINER_ID=$(docker run --rm -p 6379:6379 -d $IMAGE)
-                    for i in {1..20}; do
-                      printf "[$i/20] Checking Redis is up...\n"
-                      redis-cli ping
-                      if [ $? -eq 0 ]; then
-                        printf "Booted $IMAGE!\n"
-                        break
-                      elif [ $? -ne 0 ] && [ $i -eq 20 ]; then
-                        printf "Failed to boot image\n"
-                        exit 1
-                      fi
-                      printf "[$i/20] No response. Sleeping 10s...\n"
-                      sleep 10s
-                    done
-                    printf "Running Version Check...\n"
-                    VERSION=$(echo $IMAGE | cut -d ":" -f2 | cut -d "-" -f1)
-                    if redis-cli INFO SERVER | grep $VERSION ; then
-                      printf "Version matches!\n"
-                    else
-                      printf "Version mismatch!\n"
-                      exit 1
-                    fi
-                    printf "Stopping $IMAGE...\n"
-                    docker stop $CONTAINER_ID >/dev/null 2>&1
-                  done
-                  printf "All images passed!\n"
-          - slack/notify:
-              branch_pattern: release-v.+
-              event: pass
-              mentions: "@jalexchen"
-              template: basic_success_1
-        context: cimg-publishing
-    - cimg/build-and-deploy:
-        name: "Deploy"
-        docker-repository: redis
-        filters:
-          branches:
-            only:
-              - main
-        post-steps:
-          - slack/notify:
-              branch_pattern: main
-              event: fail
-              mentions: "@images"
-              template: basic_fail_1
-        context: cimg-publishing
+      - cimg-build:
+          docker-namespace: ccitest
+          docker-repository: redis
+          filters:
+            branches:
+              ignore:
+                - main
+          context: cimg-publishing
+      - cimg-staging:
+          docker-namespace: ccitest
+          docker-repository: redis
+          target-namespace: ccitest
+          target-repository: cimg-orb
+          organization: circleci-images
+          filters:
+            branches:
+              ignore:
+                - main
+          requires:
+            - cimg-build
+          context: cimg-publishing
+      - cimg-verify:
+          docker-namespace: ccitest
+          docker-repository: redis
+          target-namespace: ccitest
+          target-repository: cimg-orb
+          filters:
+            branches:
+              ignore:
+                - main
+          requires:
+            - cimg-staging
+          post-steps:
+            - slack/notify:
+                branch_pattern: release-v.+
+                event: pass
+                mentions: "@jalexchen"
+                template: basic_success_1
+          context: cimg-publishing
+      - cimg-deploy:
+          docker-namespace: ccitest
+          docker-repository: redis
+          target-namespace: cimg
+          target-repository: redis
+          organization: circleci-images
+          filters:
+            branches:
+              only:
+                - main
+          post-steps:
+            - slack/notify:
+                branch_pattern: main
+                event: fail
+                mentions: "@images"
+                template: basic_fail_1
+          context: cimg-publishing
 
 jobs:
   check-feed:
@@ -134,3 +128,138 @@ jobs:
             sudo chmod +x redisFeed.sh
             git submodule update --init --recursive
             ./redisFeed.sh
+
+  cimg-build:
+    docker:
+      - image: *aws-image
+    parameters:
+      docker-namespace:
+        type: string
+      docker-repository:
+        type: string
+    steps:
+      - checkout
+      - setup_remote_docker
+      - cimg/build-images:
+          docker-namespace: <<parameters.docker-namespace>>
+          docker-repository: <<parameters.docker-repository>>
+      - cimg/capture-metadata:
+          docker-namespace: <<parameters.docker-namespace>>
+          docker-repository: <<parameters.docker-repository>>
+      - aws-cli/setup:
+          region: ${AWS_DEFAULT_REGION}
+          role_arn: arn:aws:iam::483285841698:role/cpe-images-bucket-write
+          role_session_name: "write-to-s3"
+      - cimg/copy-to-s3:
+          docker-namespace: cimg
+          docker-repository: cimg-orb
+
+  cimg-staging:
+    docker:
+      - image: *aws-image
+    parameters:
+      docker-namespace:
+        type: string
+      docker-repository:
+        type: string
+      target-namespace:
+        type: string
+      target-repository:
+        type: string
+      organization:
+        type: string
+    steps:
+      - attach_workspace:
+          at: /tmp/registry
+      - aws-cli/setup:
+          region: ${AWS_DEFAULT_REGION}
+          role_arn: arn:aws:iam::483285841698:role/cpe-kms-sign
+          role_session_name: "sign-docker-images"
+      - cimg/sign-images:
+          docker-namespace: <<parameters.docker-namespace>>
+          docker-repository: <<parameters.docker-repository>>
+          organization: <<parameters.organization>>
+      - cimg/copy-images:
+          docker-namespace: <<parameters.docker-namespace>>
+          docker-repository: <<parameters.docker-repository>>
+          target-namespace: <<parameters.target-namespace>>
+          target-repository: <<parameters.target-namespace>>
+
+  cimg-verify:
+    docker:
+      - image: *aws-image
+    parameters:
+      docker-namespace:
+        type: string
+      docker-repository:
+        type: string
+      target-namespace:
+        type: string
+      target-repository:
+        type: string
+    steps:
+      - checkout
+      - aws-cli/setup:
+          region: ${AWS_DEFAULT_REGION}
+          role_arn: arn:aws:iam::483285841698:role/cpe-images-bucket-read
+          role_session_name: "read-from-s3"
+      - when:
+          condition:
+            not: <<pipeline.parameters.check_all>>
+          steps:
+            - attach_workspace:
+                at: /tmp/registry
+            - cimg/verify-signature:
+                docker-namespace: <<parameters.docker-namespace>>
+                docker-repository: <<parameters.docker-repository>>
+                target-namespace: <<parameters.target-namespace>>
+                target-repository: <<parameters.target-namespace>>
+      - when:
+          condition: <<pipeline.parameters.check_all>>
+          steps:
+            - cimg/capture-metadata:
+                docker-namespace: <<parameters.docker-namespace>>
+                docker-repository: <<parameters.docker-repository>>
+            - cimg/verify-all-signatures:
+                docker-namespace: <<parameters.docker-namespace>>
+                docker-repository: <<parameters.docker-repository>>
+
+  cimg-deploy:
+    docker:
+      - image: *aws-image
+    parameters:
+      docker-namespace:
+        type: string
+      docker-repository:
+        type: string
+      target-namespace:
+        type: string
+      target-repository:
+        type: string
+      organization:
+        type: string
+    steps:
+      - checkout
+      - run:
+          name: Check if release commit
+          command: |
+            if ! git log -1 --pretty=%s | grep "\[release]\"; then
+              echo "Not a release commit. Skipping publishing"
+              circleci halt
+            fi
+      - cimg/capture-metadata:
+          docker-namespace: <<parameters.docker-namespace>>
+          docker-repository: <<parameters.docker-repository>>
+      - aws-cli/setup:
+          region: ${AWS_DEFAULT_REGION}
+          role_arn: arn:aws:iam::483285841698:role/cpe-kms-sign
+          role_session_name: "sign-docker-images"
+      - cimg/copy-images:
+          docker-namespace: <<parameters.docker-namespace>>
+          docker-repository: <<parameters.docker-repository>>
+          target-namespace: <<parameters.target-namespace>>
+          target-repository: <<parameters.target-namespace>>
+      - cimg/sign-images:
+          docker-namespace: <<parameters.docker-namespace>>
+          docker-repository: <<parameters.docker-repository>>
+          organization: <<parameters.organization>>
