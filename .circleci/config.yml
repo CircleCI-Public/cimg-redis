@@ -58,7 +58,7 @@ workflows:
 jobs:
   check-feed:
     docker:
-      - image: cimg/base:current\
+      - image: cimg/base:current
     resource_class: small
     steps:
       - checkout
