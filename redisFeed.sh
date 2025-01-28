@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 vers=()
 
+# N.B. A bad tag of 7.99.3 was added to the release atom feed (it's actually a release version of
+# Redis Query Engine), and is causing spurious release branches to be generated repeatedly.
+ignoredVersions=("7.99.3")
+
 if [ -f shared/automated-updates.sh ]; then
   source shared/automated-updates.sh
 else
@@ -15,10 +19,18 @@ getRedisVersions() {
 
   for version in $VERSIONS; do
     if [[ $version =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+      # Remove any explicitly-ignored versions from consideration
+      if [[ " ${ignoredVersions[*]} " =~ [[:space:]]${version}[[:space:]] ]]; then
+          continue
+      fi
+
       generateVersions "$version"
+      # shellcheck disable=SC2154 # generated via shared/automated-updates.sh#generateVersions
       generateSearchTerms "REDIS_VERSION=" "$majorMinor"/Dockerfile
+      # shellcheck disable=SC2154 # generated via shared/automated-updates.sh#generateVersions
       buildParameter "$newVersion"
       directoryCheck "$majorMinor" "$SEARCH_TERM"
+
       if [[ $(eval echo $?) == 0 ]]; then
         generateVersionString "$newVersion"
       fi
