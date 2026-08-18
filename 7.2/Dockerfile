@@ -6,11 +6,11 @@
 # specific reason to use a different one. This means January, April, July, or
 # October.
 
-FROM cimg/base:2026.03-22.04
+FROM cimg/base:2026.08-22.04
 
 LABEL maintainer="CircleCI Execution Team <eng-execution@circleci.com>"
 
-ENV REDIS_VERSION=7.2.15
+ENV REDIS_VERSION=7.2.16
 
 USER root
 
@@ -21,7 +21,11 @@ RUN groupadd -r -g 1337 redis && useradd -r -g redis -u 1337 redis && \
 
 RUN curl -sSL https://download.redis.io/releases/redis-${REDIS_VERSION}.tar.gz | tar -xz && \
     cd redis-${REDIS_VERSION} && \
-    make && \
+    if [ -f scripts/build.sh ] && grep -qE '^build:' Makefile; then \
+        make build redis; \
+    else \
+        make; \
+    fi && \
     make install && \
     redis-server --version | grep "${REDIS_VERSION}"
 
