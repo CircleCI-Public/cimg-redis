@@ -6,11 +6,11 @@
 # specific reason to use a different one. This means January, April, July, or
 # October.
 
-FROM cimg/base:2026.08-22.04
+FROM cimg/base:2026.09-22.04
 
 LABEL maintainer="CircleCI Execution Team <eng-execution@circleci.com>"
 
-ENV REDIS_VERSION=8.10.1
+ENV REDIS_VERSION=8.10.2
 
 USER root
 
