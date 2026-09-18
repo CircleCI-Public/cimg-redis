@@ -10,7 +10,7 @@ FROM cimg/base:2026.08-22.04
 
 LABEL maintainer="CircleCI Execution Team <eng-execution@circleci.com>"
 
-ENV REDIS_VERSION=8.4.6
+ENV REDIS_VERSION=8.4.7
 
 USER root
 
