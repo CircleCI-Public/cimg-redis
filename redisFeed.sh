@@ -17,7 +17,9 @@ getRedisVersions() {
   RSS_URL="https://github.com/redis/redis/tags.atom"
   VERSIONS=$(curl --silent "$RSS_URL" | grep -E '(title)' | tail -n +2 | sed -e 's/^[ \t]*//' | sed -e 's/<title>//' -e 's/<\/title>//')
 
-  for version in $VERSIONS; do
+  # Iterate line-by-line rather than word-splitting: pre-release titles look like "8.12 RC3",
+  # and word-splitting would yield a bare "8.12" that passes the version regex below.
+  while IFS= read -r version; do
     if [[ $version =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
       # Remove any explicitly-ignored versions from consideration
       if [[ " ${ignoredVersions[*]} " =~ [[:space:]]${version}[[:space:]] ]]; then
@@ -35,7 +37,7 @@ getRedisVersions() {
         generateVersionString "$newVersion"
       fi
     fi
-  done
+  done <<< "$VERSIONS"
 }
 
 getRedisVersions
