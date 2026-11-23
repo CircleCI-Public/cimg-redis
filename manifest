@@ -2,6 +2,9 @@
 
 repository=redis
 parent=base
+base_version=2026.10-22.04
+new_version=2026.11-26.04
+new_tags=(8.12)
 variants=()
 namespace=cimg
 arm64=1
