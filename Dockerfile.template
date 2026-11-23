@@ -6,7 +6,7 @@
 # specific reason to use a different one. This means January, April, July, or
 # October.
 
-FROM cimg/%%PARENT%%:2026.10-22.04
+FROM cimg/%%PARENT%%:%%BASE_VERSION%%
 
 LABEL maintainer="CircleCI Execution Team <eng-execution@circleci.com>"
 
@@ -22,11 +22,10 @@ RUN groupadd -r -g 1337 redis && useradd -r -g redis -u 1337 redis && \
 RUN curl -sSL https://download.redis.io/releases/redis-${REDIS_VERSION}.tar.gz | tar -xz && \
     cd redis-${REDIS_VERSION} && \
     if [ -f scripts/build.sh ] && grep -qE '^build:' Makefile; then \
-        make build redis; \
+        make build redis && make deploy redis; \
     else \
-        make; \
+        make && make install; \
     fi && \
-    make install && \
     redis-server --version | grep "${REDIS_VERSION}"
 
 EXPOSE 6379
